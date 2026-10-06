@@ -49,6 +49,7 @@ Note Scribe is a Next.js 16 app (App Router, Server Actions) on Supabase (Auth, 
 | `pnpm db:migrate` | `prisma migrate deploy` (applies pending migrations; safe for shared databases) |
 | `pnpm db:storage` | Runs `prisma/storage.sql` |
 | `pnpm storage:cleanup` | Deletes stored files no note refers to (older than a day); run on a schedule |
+| `sh scripts/vercel-build.sh` | Vercel's build command: on Production builds runs `db:migrate` and `db:storage`, then `next build`; other builds just `next build` |
 | `pnpm prisma migrate dev --name <change>` | Create a migration from schema changes (development database only) |
 
 ## Schema changes

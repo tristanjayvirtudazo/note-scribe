@@ -18,12 +18,14 @@ Nothing is stored on the host's disk, so any number of instances can run.
 1. **Supabase** → Authentication → URL Configuration: set **Site URL** to your production address and add `https://<your-domain>/auth/callback` to **Redirect URLs** (keep the localhost entry for development).
 2. **Turnstile** (Cloudflare dashboard → Turnstile → your widget): add the production hostname. Use a real widget, not the test keys.
 3. **Gemini**: enable billing on the key (see [security.md §6a](./security.md#6a-provider-terms-that-affect-the-plan-checked-2026-10-05)); set a billing alert and cap in Google AI Studio.
-4. **Database migrations**: run them against the production database **before** the new code goes live:
-   ```bash
-   DIRECT_URL="<production direct url>" DATABASE_URL="<production pooled url>" pnpm db:migrate
-   DIRECT_URL="<production direct url>" pnpm db:storage   # first deploy, and after any change to prisma/storage.sql
-   ```
-   Do this from your machine or from CI. Do not put `migrate dev` or `db push` anywhere near production.
+4. **Database migrations** must be applied to the production database **before** the new code goes live.
+   - **On Vercel this is automatic**: `vercel.json` sets the build command to `scripts/vercel-build.sh`, which runs `pnpm db:migrate` and `pnpm db:storage` on every Production build (`VERCEL_ENV=production`) and then `next build`. A failing migration fails the build, so the previous deployment stays live. Preview builds skip the step so a branch can never migrate production.
+   - **On any other host**, run them from your machine or CI:
+     ```bash
+     DIRECT_URL="<production direct url>" pnpm db:migrate
+     DIRECT_URL="<production direct url>" pnpm db:storage   # first deploy, and after any change to prisma/storage.sql
+     ```
+   `DIRECT_URL` must be Supabase's **session pooler** address (port 5432 on `aws-0-<region>.pooler.supabase.com`); the direct host `db.<ref>.supabase.co` is IPv6-only and unreachable from Vercel's build containers. Do not put `migrate dev` or `db push` anywhere near production.
 
 ### Environment variables
 
@@ -46,7 +48,7 @@ Vercel runs Next.js natively, and its Hobby plan allows 300-second functions, wh
 2. In Vercel, **Add New → Project**, import the repository. Vercel detects Next.js and pnpm from `pnpm-lock.yaml`. Leave the build settings as detected (`pnpm install`, `next build`).
 3. **Environment Variables**: add every variable from the table above for the Production environment (and Preview if you use preview deployments; previews should point at a separate Supabase project or they will share production data).
 4. **Region**: `vercel.json` pins functions to `icn1` (Seoul), next to the Supabase project in `ap-northeast-2`. If the Supabase project ever moves, change the region there (Vercel's region list: https://vercel.com/docs/regions) so database round-trips stay short. Hobby projects run in one region.
-5. Deploy. The first build takes a few minutes; `postinstall` runs `prisma generate` automatically.
+5. Deploy. The first build takes a few minutes; `postinstall` runs `prisma generate`, and the build command applies migrations and the storage setup before `next build` (see above). Every later push to `main` does the same.
 6. Add your custom domain under **Settings → Domains**, then update the Supabase redirect URL and Turnstile hostname to match.
 
 ### Deploying from the CLI (no Git host yet)

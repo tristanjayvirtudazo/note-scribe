@@ -4,6 +4,7 @@ Newest first. Add an entry for every change that affects behaviour, data, config
 
 ## 2026-10-06
 
+- Vercel builds now apply database migrations automatically: `scripts/vercel-build.sh` (set as `buildCommand` in `vercel.json`) runs `pnpm db:migrate` and `pnpm db:storage` on Production builds before `next build`, and skips them on Preview builds. Manual migration commands remain for other hosts.
 - Vercel deployment: added `vercel.json` pinning functions to `icn1` (Seoul) to sit next to the Supabase project in `ap-northeast-2`; `docs/deployment.md` now documents the CLI deploy path for a repository without a Git remote and the region pin.
 
 ## 2026-10-05
