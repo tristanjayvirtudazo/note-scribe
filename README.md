@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Note Scribe
 
-## Getting Started
+Note Scribe turns the study material you already have — photos of handwritten notes, slides, textbook pages, PDFs — into clear study notes, quizzes and flashcards, then helps you remember them with spaced reviews.
 
-First, run the development server:
+Upload a file, and the app reads it and writes an organised study guide you can edit. From any note you can generate a quiz or a deck of flashcards, test yourself, and let the review schedule tell you when to come back.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Notes**
+- Create a note from up to five images or PDFs; the AI writes a study guide split into editable parts (overview, topic sections, key terms, quick review).
+- Edit, reorder, delete and add parts; regenerate the whole note from the original files at any time.
+- Organise notes by subject with colours; search across titles, descriptions and content.
+- Open the original files whenever you need them.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Quizzes**
+- Generate any number of multiple-choice and true/false questions from a note.
+- Take the quiz with a fresh question and answer order every round; scores are saved.
+- Results show the score only. Explanations unlock per question once you have answered it correctly twice, so retakes test understanding rather than memory of the previous round.
+- Edit, add or remove questions; see your attempt history.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Flashcards**
+- Generate cards from a note or write your own; add more at any time.
+- Study one card at a time: recall, reveal, then rate yourself "Not yet" or "Got it" (keyboard shortcuts included).
+- Cards you miss come back later in the session; each card follows its own spaced schedule.
 
-## Learn More
+**Review loop**
+- Mastery per note, based on how reliably you answer its questions.
+- A spaced review schedule (1, 3, 7, 14, 30 days) driven by your quiz scores, with a "Due for review" list on the home screen.
+- A daily study streak.
+- Calendar feed: subscribe from Apple Calendar, Google Calendar or Outlook to see review dates, or add a single review to your calendar from the note.
 
-To learn more about Next.js, take a look at the following resources:
+**Accounts and privacy**
+- Email and password sign-in with email confirmation, password reset, and bot protection.
+- Profile and password management, sign-out everywhere on password change, and full account deletion.
+- Your files and notes are visible only to you.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Everywhere**
+- Works on phones, tablets and desktops; light and dark themes.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Documentation
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Developer guide](./docs/developer-guide.md) — setup, environment, scripts, conventions
+- [Deployment](./docs/deployment.md) — deploy to Vercel, Netlify or any Node host
+- [Features](./docs/features.md) — exact behaviour and limits
+- [Architecture](./docs/architecture.md) — how it is built
+- [Security](./docs/security.md) — threat model and controls
+- [Changelog](./docs/changelog.md)

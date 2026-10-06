@@ -1,0 +1,205 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum NoteStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+}
+
+/// One row per Supabase Auth user; `id` is the auth user's id.
+model Profile {
+  id                String    @id @db.Uuid
+  email             String
+  fullName          String?   @map("full_name")
+  /// Consecutive calendar days (UTC) with at least one quiz attempt or flashcard review.
+  studyStreak       Int       @default(0) @map("study_streak")
+  lastStudiedOn     DateTime? @map("last_studied_on") @db.Date
+  /// SHA-256 of the secret in the user's calendar feed URL; null when the feed is off.
+  calendarTokenHash String?   @unique @map("calendar_token_hash")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  subjects   Subject[]
+  notes      Note[]
+  quizzes    Quiz[]
+  attempts   QuizAttempt[]
+  flashcards Flashcard[]
+  aiUsage    AiUsage[]
+
+  @@map("profiles")
+}
+
+model Subject {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  color     String   @default("indigo")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  notes Note[]
+
+  @@unique([userId, name])
+  @@map("subjects")
+}
+
+model Note {
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String     @map("user_id") @db.Uuid
+  user        Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId   String?    @map("subject_id") @db.Uuid
+  subject     Subject?   @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  title       String
+  description String?
+  status      NoteStatus @default(PENDING)
+  error       String?
+  /// Spaced review (Leitner): box 0 = not yet quizzed, 1–5 = interval tier; due date derived from the box.
+  reviewBox   Int        @default(0) @map("review_box")
+  reviewDueAt DateTime?  @map("review_due_at") @db.Timestamptz(6)
+  /// 0–100: share of quiz questions answered correctly on their last two appearances.
+  mastery     Int?
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  files      NoteFile[]
+  sections   NoteSection[]
+  quizzes    Quiz[]
+  flashcards Flashcard[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@index([userId, reviewDueAt])
+  @@index([subjectId])
+  @@map("notes")
+}
+
+/// An uploaded source file, stored in the private `note-files` Supabase Storage bucket.
+model NoteFile {
+  id        String   @id @default(uuid()) @db.Uuid
+  noteId    String   @map("note_id") @db.Uuid
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  name      String
+  path      String
+  mimeType  String   @map("mime_type")
+  size      Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([noteId])
+  @@map("note_files")
+}
+
+model NoteSection {
+  id        String   @id @default(uuid()) @db.Uuid
+  noteId    String   @map("note_id") @db.Uuid
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  heading   String
+  /// Markdown
+  content   String
+  position  Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([noteId, position])
+  @@map("note_sections")
+}
+
+model Quiz {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  noteId    String   @map("note_id") @db.Uuid
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  title     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  @@index([userId])
+  @@index([noteId])
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id           String       @id @default(uuid()) @db.Uuid
+  quizId       String       @map("quiz_id") @db.Uuid
+  quiz         Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  type         QuestionType
+  prompt       String
+  options      String[]
+  correctIndex Int          @map("correct_index")
+  explanation  String?
+  position     Int
+
+  @@index([quizId, position])
+  @@map("quiz_questions")
+}
+
+model QuizAttempt {
+  id        String   @id @default(uuid()) @db.Uuid
+  quizId    String   @map("quiz_id") @db.Uuid
+  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id") @db.Uuid
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score     Int
+  total     Int
+  /// { [questionId]: selectedIndex }
+  answers   Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([quizId, createdAt(sort: Desc)])
+  @@index([userId])
+  @@map("quiz_attempts")
+}
+
+/// A two-sided study card with its own spaced-review state.
+model Flashcard {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  user           Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  noteId         String    @map("note_id") @db.Uuid
+  note           Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  front          String
+  back           String
+  position       Int
+  /// Leitner box: 0 = never reviewed, 1–5 = interval tier.
+  box            Int       @default(0)
+  dueAt          DateTime? @map("due_at") @db.Timestamptz(6)
+  reviewedCount  Int       @default(0) @map("reviewed_count")
+  lastReviewedAt DateTime? @map("last_reviewed_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([noteId, position])
+  @@index([userId, dueAt])
+  @@map("flashcards")
+}
+
+/// One row per AI request, for budgets, abuse detection and cost visibility.
+model AiUsage {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  user           Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task           String
+  model          String?
+  promptTokens   Int      @default(0) @map("prompt_tokens")
+  outputTokens   Int      @default(0) @map("output_tokens")
+  thinkingTokens Int      @default(0) @map("thinking_tokens")
+  ok             Boolean
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@map("ai_usage")
+}
